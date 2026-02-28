@@ -14,44 +14,64 @@ A public hosted instance is available at **[ref-bib.vercel.app](https://ref-bib.
 
 ## Current Status (February 2026)
 
-RefBib is currently at **Phase 1.5 (MVP+)**.
+RefBib is at **Phase 2.5** — a fully-featured reference extraction and management tool.
 
 ### Implemented
 
+**Core Extraction**
 - Single PDF upload (drag-and-drop or file picker)
+- Multi-PDF batch upload (sequential processing, up to 20 files per batch)
 - Reference extraction via GROBID with automatic multi-instance fallback
-- BibTeX resolution waterfall: CrossRef -> Semantic Scholar -> DBLP -> GROBID fallback `@misc`
+- BibTeX resolution waterfall: CrossRef → Semantic Scholar → DBLP → GROBID fallback `@misc`
 - Match status labeling (`Matched` / `Fuzzy` / `Unmatched`)
+- Manual DOI resolution for unmatched references (paste a DOI → get BibTeX)
+
+**Discovery & Search**
 - Unmatched availability check (`Check availability`) across CrossRef / Semantic Scholar / DBLP
 - Search + status filter + select all / deselect all
-- Export selected entries by copy-to-clipboard or `.bib` download
-- Local Workspace view with dedup stats, conflict queue, and workspace-level export
+- Google Scholar search link for unmatched references
+
+**Workspace**
+- Local Workspace with automatic deduplication (DOI, fingerprint, bigram similarity)
+- Conflict resolution queue (interactive merge / keep-both)
+- Manual BibTeX editor (override individual entries)
+- Workspace search/filter (text search + dedup status toggle chips)
+- Venue/Year grouping (collapsible grouped display)
+- Analytics dashboard (year distribution, venue distribution, match quality pie, most-cited list)
+- Export: deduplicated `.bib` or occurrence-preserving `.bib`, copy to clipboard
+
+**Infrastructure**
 - Top-level `Extract | Workspace` navigation
 - Password gate for hosted instances (`SITE_PASSWORD`)
 - Light/dark theme toggle
+- Self-hosted instance notice banner with rate limit info
 
 ### Not Yet Implemented
 
-- Multi-PDF batch upload in one request
-- Multi-workspace management (create/rename/switch/delete)
-- Topic clustering and citation-frequency analysis
-- Overleaf integration
-- Browser extension and citation graph visualization
+- Multi-workspace management (create/rename/switch/delete) — data structure ready
+- Semantic topic clustering
+- Overleaf integration / browser extension / citation graph visualization
 
 ### Validation Snapshot
 
-- Backend test suite: **62 tests passing** (`cd backend && .venv/bin/pytest -q backend/tests`)
-- Frontend test suite: **11 tests passing** (`cd frontend && npx vitest run`)
+- Backend test suite: **84 tests passing** (`cd backend && .venv/bin/pytest`)
+- Frontend test suite: **16 tests passing** (`cd frontend && npx vitest run`)
 
 ## Use Case
 
 Writing a paper and reading through related work? When you find a relevant published paper, drop it into RefBib to instantly grab all its references as BibTeX — no more manually searching and copying entries one by one.
 
-**Recommended workflow:**
+**Single-paper workflow:**
 1. Find a related paper in your field (conference/journal version works best)
 2. Upload the PDF to RefBib
 3. Get the full reference list as BibTeX in seconds
 4. Cherry-pick the entries you need for your own bibliography
+
+**Batch workflow (literature survey):**
+1. Collect multiple key papers in your field
+2. Drop them all into RefBib at once (up to 20 PDFs)
+3. Matched references are auto-added to your Workspace
+4. Review the deduplicated Workspace, resolve conflicts, and export a clean `.bib`
 
 This is especially useful when surveying a new topic — start from a few key papers, extract their references, and quickly build up a comprehensive `.bib` file.
 
@@ -122,39 +142,50 @@ npm run dev
 ## How It Works
 
 ```text
-PDF -> GROBID (parse references) -> BibTeX Lookup -> Extract view export
-                                      |- CrossRef (DOI -> BibTeX)
-                                      |- Semantic Scholar (title search)
-                                      |- DBLP (title search)
-                                      `- GROBID fallback (@misc)
+PDF(s) -> GROBID (parse references) -> BibTeX Lookup -> Extract view
+                                         |- CrossRef (DOI -> BibTeX)
+                                         |- Semantic Scholar (title search)
+                                         |- DBLP (title search)
+                                         `- GROBID fallback (@misc)
 
-Extract view -> Add selected to Workspace -> local dedup store -> Workspace export
-Unmatched item -> Check availability -> CrossRef / S2 / DBLP discovery status
+Single PDF  -> Extract view -> select/filter -> export .bib or Add to Workspace
+Multi-PDF   -> Batch progress -> Batch summary -> auto-add matched to Workspace
+
+Workspace   -> search/filter -> group by venue/year -> export deduplicated .bib
+            -> conflict queue -> merge / keep both
+            -> analytics dashboard (charts)
+
+Unmatched   -> Check availability -> CrossRef / S2 / DBLP discovery
+            -> Resolve by DOI -> paste DOI -> get verified BibTeX
 ```
 
-1. Upload a PDF with a reference section
+1. Upload one or more PDFs with reference sections
 2. GROBID extracts structured citations (title, authors, year, DOI, venue)
 3. Each reference is looked up via a waterfall strategy: CrossRef → Semantic Scholar → DBLP
 4. If no match is found, a fallback `@misc` entry is constructed from GROBID's parse
-5. Select the entries you want and download a `.bib` file or copy to clipboard
+5. **Single PDF:** Select the entries you want and download a `.bib` file or copy to clipboard
+6. **Batch upload (2+ PDFs):** Files are processed sequentially; matched/fuzzy refs are auto-added to Workspace
 
 ### Workspace
 
 - Add selected references from the extract page to a local Workspace (stored in browser localStorage)
 - Open the `Workspace` tab to review deduplicated entries, source-paper groups, and conflict queue
+- **Search & filter:** Text search across titles/authors/venues + toggle dedup status chips (unique/merged/conflict)
+- **Conflict resolution:** When duplicates have conflicting metadata, review them side-by-side and choose Merge or Keep Both
+- **BibTeX editor:** Click any entry to edit its BibTeX directly; overrides are saved and used in exports
+- **Grouping:** Group entries by venue or year with collapsible sections
+- **Analytics:** View citation year distribution, venue distribution, match quality breakdown, and most-cited references
 - Export either:
   - `Export Unique .bib` (deduplicated)
   - `Export All (with duplicates)` (occurrence-preserving)
 - Clear Workspace at any time from the Workspace actions panel
 
-### Unmatched Discovery
+### Unmatched Discovery & DOI Resolution
 
-- `Unmatched` still means no BibTeX match in the main waterfall; RefBib builds a fallback `@misc`
-- You can now click `Check availability` on unmatched entries to probe indexed sources:
-  - CrossRef
-  - Semantic Scholar
-  - DBLP
-- This returns a separate discoverability signal (`available` / `unavailable` / `error` / `skipped`) and does not overwrite `match_status`
+- `Unmatched` means no BibTeX match in the main waterfall; RefBib builds a fallback `@misc`
+- Click `Check availability` on unmatched entries to probe indexed sources (CrossRef / Semantic Scholar / DBLP)
+- This returns a discoverability signal (`available` / `unavailable` / `error` / `skipped`) without overwriting `match_status`
+- Click `Resolve by DOI` to manually paste a DOI — RefBib will fetch verified BibTeX from CrossRef and upgrade the entry to `Matched`
 
 ### Match Status
 
@@ -364,16 +395,21 @@ If you fork or clone this repo, you will deploy to **your own** Fly.io/Vercel ac
 
 ## Tech Stack
 
-- **Frontend:** Next.js (App Router) + shadcn/ui + TailwindCSS
+- **Frontend:** Next.js (App Router) + shadcn/ui + TailwindCSS + Recharts
 - **Backend:** Python FastAPI + httpx + lxml
 - **PDF Parsing:** GROBID (TEI XML)
 
 ## Tests
 
 ```bash
+# Backend (84 tests)
 cd backend
 source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pytest
+
+# Frontend (16 tests)
+cd frontend
+npx vitest run
 ```
 
 ## Contributing
