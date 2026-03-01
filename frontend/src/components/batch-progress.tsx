@@ -1,11 +1,13 @@
 "use client";
 
+import { useRef } from "react";
 import {
   AlertCircle,
   CheckCircle2,
   FileText,
   Loader2,
   Clock,
+  Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BatchFileResult } from "@/lib/types";
@@ -14,13 +16,16 @@ interface BatchProgressProps {
   fileResults: BatchFileResult[];
   currentIndex: number;
   onCancel: () => void;
+  onAppendFiles: (files: File[]) => void;
 }
 
 export function BatchProgress({
   fileResults,
   currentIndex,
   onCancel,
+  onAppendFiles,
 }: BatchProgressProps) {
+  const appendInputRef = useRef<HTMLInputElement>(null);
   const doneCount = fileResults.filter(
     (r) => r.status === "done" || r.status === "error"
   ).length;
@@ -37,9 +42,34 @@ export function BatchProgress({
             take a moment.
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={onCancel}>
-          Cancel
-        </Button>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => appendInputRef.current?.click()}
+            className="gap-1.5"
+          >
+            <Plus className="h-4 w-4" />
+            Add more
+          </Button>
+          <Button variant="outline" size="sm" onClick={onCancel}>
+            Cancel
+          </Button>
+          <input
+            ref={appendInputRef}
+            type="file"
+            accept=".pdf"
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              const files = Array.from(e.target.files || []).filter(
+                (f) => f.name.toLowerCase().endsWith(".pdf")
+              );
+              if (files.length > 0) onAppendFiles(files);
+              e.target.value = "";
+            }}
+          />
+        </div>
       </div>
 
       <div className="space-y-1.5">

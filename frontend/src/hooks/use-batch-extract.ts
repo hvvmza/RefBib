@@ -8,15 +8,8 @@ import {
   BatchStage,
   BatchSummary,
   ExtractResponse,
-  Reference,
   WorkspaceAddResult,
 } from "@/lib/types";
-
-interface AddReferencesInput {
-  paperId: string;
-  paperLabel: string;
-  references: Reference[];
-}
 
 export function useBatchExtract() {
   const [batchStage, setBatchStage] = useState<BatchStage>("idle");
@@ -24,12 +17,17 @@ export function useBatchExtract() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
   const cancelledRef = useRef(false);
+  // Ref to avoid stale closures in resumeBatch/retryFile
+  const fileResultsRef = useRef<BatchFileResult[]>([]);
+  fileResultsRef.current = fileResults;
 
+  // startBatch iterates over the closed-over `files` param, so files appended
+  // mid-processing are not picked up here. They remain "pending" and are
+  // processed by a subsequent resumeBatch call (via "Resume Remaining").
   const startBatch = useCallback(
     async (
       files: File[],
       grobidInstanceId: string | undefined,
-      addToWorkspace: (input: AddReferencesInput) => WorkspaceAddResult
     ) => {
       cancelledRef.current = false;
       const controller = new AbortController();
@@ -63,27 +61,17 @@ export function useBatchExtract() {
             grobidInstanceId,
           });
 
-          // Auto-add matched + fuzzy references to workspace
-          const refsWithBibtex = data.references.filter(
-            (r) => r.bibtex && r.match_status !== "unmatched"
-          );
-          let workspaceResult: WorkspaceAddResult | null = null;
-          if (refsWithBibtex.length > 0) {
-            workspaceResult = addToWorkspace({
-              paperId: results[i].paperId,
-              paperLabel: files[i].name,
-              references: refsWithBibtex,
-            });
-          }
-
           results[i] = {
             ...results[i],
             status: "done",
             data,
-            workspaceResult,
           };
         } catch (err) {
-          if (controller.signal.aborted) return;
+          if (controller.signal.aborted) {
+            results[i] = { ...results[i], status: "pending", error: null };
+            setFileResults([...results]);
+            return;
+          }
           results[i] = {
             ...results[i],
             status: "error",
@@ -114,6 +102,118 @@ export function useBatchExtract() {
     setBatchStage("idle");
     setCurrentIndex(0);
   }, []);
+
+  const resumeBatch = useCallback(
+    async (grobidInstanceId: string | undefined) => {
+      cancelledRef.current = false;
+      const controller = new AbortController();
+      abortRef.current = controller;
+      setBatchStage("processing");
+
+      const results = [...fileResultsRef.current];
+
+      for (let i = 0; i < results.length; i++) {
+        if (cancelledRef.current || controller.signal.aborted) {
+          setBatchStage("cancelled");
+          return;
+        }
+
+        // Skip already-done files
+        if (results[i].status === "done") continue;
+
+        setCurrentIndex(i);
+        results[i] = { ...results[i], status: "processing", error: null };
+        setFileResults([...results]);
+
+        try {
+          const data: ExtractResponse = await extractReferences(
+            results[i].file,
+            { signal: controller.signal, grobidInstanceId }
+          );
+          results[i] = { ...results[i], status: "done", data };
+        } catch (err) {
+          if (controller.signal.aborted) {
+            results[i] = { ...results[i], status: "pending", error: null };
+            setFileResults([...results]);
+            return;
+          }
+          results[i] = {
+            ...results[i],
+            status: "error",
+            error: err instanceof Error ? err.message : "Extraction failed",
+          };
+        }
+
+        setFileResults([...results]);
+      }
+
+      setBatchStage("done");
+    },
+    []
+  );
+
+  const retryFile = useCallback(
+    async (paperId: string, grobidInstanceId: string | undefined) => {
+      const results = [...fileResultsRef.current];
+      const idx = results.findIndex((fr) => fr.paperId === paperId);
+      if (idx === -1) return;
+
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      results[idx] = { ...results[idx], status: "processing", error: null };
+      setFileResults([...results]);
+
+      try {
+        const data: ExtractResponse = await extractReferences(
+          results[idx].file,
+          { signal: controller.signal, grobidInstanceId }
+        );
+        results[idx] = { ...results[idx], status: "done", data };
+      } catch (err) {
+        if (controller.signal.aborted) {
+          results[idx] = { ...results[idx], status: "error", error: "Cancelled" };
+          setFileResults([...results]);
+          return;
+        }
+        results[idx] = {
+          ...results[idx],
+          status: "error",
+          error: err instanceof Error ? err.message : "Extraction failed",
+        };
+      }
+
+      setFileResults([...results]);
+    },
+    []
+  );
+
+  const appendFiles = useCallback((files: File[]) => {
+    const newEntries: BatchFileResult[] = files.map((file) => ({
+      file,
+      paperId: buildPaperId(file),
+      status: "pending" as const,
+      data: null,
+      error: null,
+      workspaceResult: null,
+    }));
+    setFileResults((prev) => {
+      const next = [...prev, ...newEntries];
+      fileResultsRef.current = next; // Eagerly sync so resumeBatch sees appended files
+      return next;
+    });
+  }, []);
+
+  const updateFileWorkspaceResult = useCallback(
+    (paperId: string, result: WorkspaceAddResult) => {
+      setFileResults((prev) =>
+        prev.map((fr) =>
+          fr.paperId === paperId ? { ...fr, workspaceResult: result } : fr
+        )
+      );
+    },
+    []
+  );
 
   const summary: BatchSummary = useMemo(() => {
     let totalRefs = 0;
@@ -159,5 +259,9 @@ export function useBatchExtract() {
     startBatch,
     cancelBatch,
     resetBatch,
+    resumeBatch,
+    retryFile,
+    appendFiles,
+    updateFileWorkspaceResult,
   };
 }
