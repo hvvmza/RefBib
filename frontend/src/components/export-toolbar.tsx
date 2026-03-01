@@ -13,11 +13,15 @@ interface ExportToolbarProps {
   onAddToWorkspace: (
     selectedRefs: Reference[]
   ) => WorkspaceAddResult | Promise<WorkspaceAddResult>;
+  suppressAutoNavigate?: boolean;
+  compact?: boolean;
 }
 
 export function ExportToolbar({
   selectedRefs,
   onAddToWorkspace,
+  suppressAutoNavigate,
+  compact,
 }: ExportToolbarProps) {
   const router = useRouter();
   const { downloadBib, copyToClipboard } = useExportBibtex();
@@ -51,8 +55,9 @@ export function ExportToolbar({
             ? `${result.conflicts} potential conflicts flagged for review.`
             : undefined,
       });
-      // Only auto-navigate when there are no conflicts to review.
-      if (result.conflicts === 0) {
+      // Only auto-navigate when there are no conflicts to review
+      // and navigation is not suppressed (e.g. in batch review context).
+      if (result.conflicts === 0 && !suppressAutoNavigate) {
         router.push("/workspace");
       }
     } catch (error) {
@@ -73,7 +78,10 @@ export function ExportToolbar({
   };
 
   return (
-    <div className="sticky bottom-0 bg-background/95 backdrop-blur border-t py-3 -mx-4 px-4 sm:-mx-6 sm:px-6 md:-mx-8 md:px-8">
+    <div className={compact
+      ? "border-t pt-3"
+      : "sticky bottom-0 bg-background/95 backdrop-blur border-t py-3 -mx-4 px-4 sm:-mx-6 sm:px-6 md:-mx-8 md:px-8"
+    }>
       <div className="flex items-center justify-between gap-3">
         <div className="space-y-0.5">
           <p className="text-sm text-muted-foreground">

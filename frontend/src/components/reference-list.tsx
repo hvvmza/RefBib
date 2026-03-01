@@ -23,13 +23,14 @@ import {
 
 interface ReferenceListProps {
   data: ExtractResponse;
-  onReset: () => void;
+  onReset?: () => void;
   workspaceStats: WorkspaceStats;
   onAddToWorkspace: (
     selectedRefs: Reference[]
   ) => WorkspaceAddResult | Promise<WorkspaceAddResult>;
   getCachedDiscovery?: (reference: Reference) => DiscoveryResult | null;
   onCheckAvailability?: (reference: Reference) => Promise<DiscoveryResult>;
+  compact?: boolean;
 }
 
 export function ReferenceList({
@@ -39,6 +40,7 @@ export function ReferenceList({
   onAddToWorkspace,
   getCachedDiscovery,
   onCheckAvailability,
+  compact,
 }: ReferenceListProps) {
   const [resolvedOverrides, setResolvedOverrides] = useState<
     Map<number, Partial<Reference>>
@@ -150,65 +152,71 @@ export function ReferenceList({
 
   return (
     <div className="space-y-4">
-      {/* Summary bar */}
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <div className="text-sm text-muted-foreground">
-          <span className="font-medium text-foreground">
-            {data.total_count} references
-          </span>{" "}
-          found in {data.processing_time_seconds.toFixed(1)}s
-          <span className="ml-2">
-            ({data.matched_count} matched, {data.fuzzy_count} fuzzy,{" "}
-            {data.unmatched_count} unmatched)
-          </span>
-        </div>
-        <button
-          onClick={onReset}
-          className="text-xs text-primary hover:underline"
-        >
-          Upload another PDF
-        </button>
-      </div>
-      <div className="rounded-md border border-blue-200 bg-blue-50/70 px-3 py-2 text-xs text-blue-800 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-200">
-        Workspace active: dedup will be applied on workspace export
-      </div>
-
-      {/* Status legend */}
-      <Collapsible>
-        <CollapsibleTrigger className="group flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer">
-          <Info className="h-3.5 w-3.5" />
-          <span>What do matched / fuzzy / unmatched mean?</span>
-          <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]:rotate-180" />
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <div className="mt-2 rounded-lg border bg-muted/30 px-4 py-3 space-y-2 text-sm text-muted-foreground">
-            <div className="flex items-start gap-2.5">
-              <span className="mt-1.5 h-2 w-2 rounded-full bg-foreground shrink-0" />
-              <p>
-                <strong className="text-foreground">Matched</strong> &mdash;
-                Verified BibTeX from CrossRef, Semantic Scholar, or DBLP with
-                high confidence (DOI or exact title match). Ready to use.
-              </p>
+      {!compact && (
+        <>
+          {/* Summary bar */}
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">
+                {data.total_count} references
+              </span>{" "}
+              found in {data.processing_time_seconds.toFixed(1)}s
+              <span className="ml-2">
+                ({data.matched_count} matched, {data.fuzzy_count} fuzzy,{" "}
+                {data.unmatched_count} unmatched)
+              </span>
             </div>
-            <div className="flex items-start gap-2.5">
-              <span className="mt-1.5 h-2 w-2 rounded-full bg-yellow-500 shrink-0" />
-              <p>
-                <strong className="text-foreground">Fuzzy</strong> &mdash;
-                Found a likely match, but title similarity is below 90%.
-                Review before using &mdash; the BibTeX may belong to a different paper.
-              </p>
-            </div>
-            <div className="flex items-start gap-2.5">
-              <span className="mt-1.5 h-2 w-2 rounded-full bg-destructive shrink-0" />
-              <p>
-                <strong className="text-foreground">Unmatched</strong> &mdash;
-                No match found in any database. BibTeX was constructed from
-                GROBID&apos;s raw parse. Fields may be incomplete or need manual correction.
-              </p>
-            </div>
+            {onReset && (
+              <button
+                onClick={onReset}
+                className="text-xs text-primary hover:underline"
+              >
+                Upload another PDF
+              </button>
+            )}
           </div>
-        </CollapsibleContent>
-      </Collapsible>
+          <div className="rounded-md border border-blue-200 bg-blue-50/70 px-3 py-2 text-xs text-blue-800 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-200">
+            Workspace active: dedup will be applied on workspace export
+          </div>
+
+          {/* Status legend */}
+          <Collapsible>
+            <CollapsibleTrigger className="group flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer">
+              <Info className="h-3.5 w-3.5" />
+              <span>What do matched / fuzzy / unmatched mean?</span>
+              <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]:rotate-180" />
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="mt-2 rounded-lg border bg-muted/30 px-4 py-3 space-y-2 text-sm text-muted-foreground">
+                <div className="flex items-start gap-2.5">
+                  <span className="mt-1.5 h-2 w-2 rounded-full bg-foreground shrink-0" />
+                  <p>
+                    <strong className="text-foreground">Matched</strong> &mdash;
+                    Verified BibTeX from CrossRef, Semantic Scholar, or DBLP with
+                    high confidence (DOI or exact title match). Ready to use.
+                  </p>
+                </div>
+                <div className="flex items-start gap-2.5">
+                  <span className="mt-1.5 h-2 w-2 rounded-full bg-yellow-500 shrink-0" />
+                  <p>
+                    <strong className="text-foreground">Fuzzy</strong> &mdash;
+                    Found a likely match, but title similarity is below 90%.
+                    Review before using &mdash; the BibTeX may belong to a different paper.
+                  </p>
+                </div>
+                <div className="flex items-start gap-2.5">
+                  <span className="mt-1.5 h-2 w-2 rounded-full bg-destructive shrink-0" />
+                  <p>
+                    <strong className="text-foreground">Unmatched</strong> &mdash;
+                    No match found in any database. BibTeX was constructed from
+                    GROBID&apos;s raw parse. Fields may be incomplete or need manual correction.
+                  </p>
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        </>
+      )}
 
       <FilterBar
         references={effectiveRefs}
@@ -244,8 +252,10 @@ export function ReferenceList({
       <ExportToolbar
         selectedRefs={selectedRefs}
         onAddToWorkspace={onAddToWorkspace}
+        suppressAutoNavigate={compact}
+        compact={compact}
       />
-      {workspaceStats.refs > 0 && <WorkspaceDock stats={workspaceStats} />}
+      {!compact && workspaceStats.refs > 0 && <WorkspaceDock stats={workspaceStats} />}
     </div>
   );
 }
