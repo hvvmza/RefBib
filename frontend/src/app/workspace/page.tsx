@@ -46,8 +46,8 @@ function WorkspaceEntryCard({
 
   return (
     <article className="rounded-lg border p-3 space-y-1">
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <p className="font-medium text-sm">
+      <div className="flex items-start gap-2">
+        <p className="font-medium text-sm flex-1 min-w-0">
           {titleLink ? (
             <a
               href={titleLink}
@@ -61,7 +61,7 @@ function WorkspaceEntryCard({
             titleText
           )}
         </p>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
           {hasOverride && (
             <Badge variant="outline" className="text-[10px] h-4 border-blue-400 text-blue-600 dark:text-blue-400">
               edited
@@ -309,7 +309,7 @@ export default function WorkspacePage() {
                     className="pl-9 h-9"
                   />
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 flex-wrap">
                   {(["unique", "merged", "conflict"] as DedupStatus[]).map(
                     (status) => (
                       <Button

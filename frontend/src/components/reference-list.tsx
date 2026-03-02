@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Info, ChevronDown } from "lucide-react";
 import { ReferenceItem } from "./reference-item";
 import { FilterBar, Filters } from "./filter-bar";
@@ -42,6 +42,8 @@ export function ReferenceList({
   onCheckAvailability,
   compact,
 }: ReferenceListProps) {
+  const INITIAL_COMPACT_RENDER_COUNT = 16;
+  const COMPACT_RENDER_CHUNK = 16;
   const [resolvedOverrides, setResolvedOverrides] = useState<
     Map<number, Partial<Reference>>
   >(() => new Map());
@@ -81,6 +83,48 @@ export function ReferenceList({
       return true;
     });
   }, [effectiveRefs, filters]);
+  const [visibleCount, setVisibleCount] = useState(() =>
+    compact ? INITIAL_COMPACT_RENDER_COUNT : Number.POSITIVE_INFINITY
+  );
+
+  useEffect(() => {
+    if (!compact) return;
+
+    let rafId: number | null = null;
+    let cancelled = false;
+
+    const pump = () => {
+      if (cancelled) return;
+      setVisibleCount((prev) => {
+        const next = Math.min(prev + COMPACT_RENDER_CHUNK, filteredRefs.length);
+        if (next < filteredRefs.length && !cancelled) {
+          rafId = window.requestAnimationFrame(pump);
+        }
+        return next;
+      });
+    };
+
+    rafId = window.requestAnimationFrame(() => {
+      if (cancelled) return;
+      setVisibleCount(INITIAL_COMPACT_RENDER_COUNT);
+      if (filteredRefs.length <= INITIAL_COMPACT_RENDER_COUNT) return;
+      rafId = window.requestAnimationFrame(pump);
+    });
+
+    return () => {
+      cancelled = true;
+      if (rafId !== null) {
+        window.cancelAnimationFrame(rafId);
+      }
+    };
+  }, [compact, filteredRefs.length]);
+  const renderedRefs = useMemo(
+    () =>
+      compact
+        ? filteredRefs.slice(0, visibleCount)
+        : filteredRefs,
+    [compact, filteredRefs, visibleCount]
+  );
 
   const selectedRefs = useMemo(
     () => effectiveRefs.filter((r) => selected.has(r.index)),
@@ -230,7 +274,7 @@ export function ReferenceList({
 
       {/* Reference items */}
       <div className="space-y-2">
-        {filteredRefs.map((ref) => (
+        {renderedRefs.map((ref) => (
           <ReferenceItem
             key={ref.index}
             reference={ref}
@@ -244,6 +288,11 @@ export function ReferenceList({
         {filteredRefs.length === 0 && (
           <p className="text-center text-sm text-muted-foreground py-8">
             No references match your filters.
+          </p>
+        )}
+        {compact && renderedRefs.length < filteredRefs.length && (
+          <p className="text-center text-xs text-muted-foreground py-2">
+            Rendering {renderedRefs.length} / {filteredRefs.length} references...
           </p>
         )}
       </div>

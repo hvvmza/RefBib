@@ -274,7 +274,7 @@ export function BatchSummary({
                   </button>
                 </CollapsibleTrigger>
 
-                <CollapsibleContent className="overflow-hidden data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up">
+                <CollapsibleContent className="overflow-hidden">
                   {/* Full reference list */}
                   {result.status === "done" &&
                     result.data &&

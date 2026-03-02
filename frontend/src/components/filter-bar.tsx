@@ -70,7 +70,7 @@ export function FilterBar({
           />
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 flex-wrap">
           {(["matched", "fuzzy", "unmatched"] as MatchStatus[]).map(
             (status) => (
               <Button

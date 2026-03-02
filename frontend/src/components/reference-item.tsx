@@ -177,7 +177,7 @@ export function ReferenceItem({
             )}
           </div>
 
-          <div className="flex items-center gap-2 mt-2">
+          <div className="flex items-center gap-2 mt-2 flex-wrap">
             <Badge variant={variant} className="text-[10px] h-5">
               {label}
             </Badge>
