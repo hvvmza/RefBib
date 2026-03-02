@@ -48,7 +48,7 @@ RefBib is at **Phase 2.5** — a fully-featured reference extraction and managem
 - Password gate for hosted instances (`SITE_PASSWORD`)
 - Light/dark theme toggle
 - Self-hosted instance notice banner with rate limit info
-- Smooth accordion animation for per-file result expansion
+- Progressive rendering for large reference lists (smooth expand even with 50+ refs per file)
 
 ### Not Yet Implemented
 

@@ -120,7 +120,7 @@ Implemented now:
 - Multi-PDF batch upload (sequential processing, max 20, auto-add matched/fuzzy to workspace)
 - Append PDFs at any stage ("Add more PDFs" button during processing or on results page)
 - Batch resume/retry — resume remaining pending files, retry individual failed files
-- Smooth accordion animation (Radix Collapsible + tw-animate-css) for per-file result expansion
+- Progressive rendering for large reference lists in compact accordion mode (rAF-based chunked render)
 - Abort handling with status revert — cancel leaves files in correct state (pending/error, not stuck processing)
 - GROBID instance picker + health checks + automatic fallback chain
 - Match status UX (`matched` / `fuzzy` / `unmatched`) with search + status filter
@@ -176,6 +176,11 @@ Not implemented yet:
 - Workspace search filters entries client-side; conflict queue and analytics always use unfiltered data to avoid hiding important items.
 - Workspace analytics uses Recharts library for visualizations.
 - `text-utils.ts` contains shared utilities (normalizeText, buildBigrams, buildPaperId, titleSimilarity) used by both workspace dedup and batch extract.
+- `scrollbar-gutter: stable` on `html` (not `body`) to properly reserve viewport scrollbar space and prevent layout shift during accordion expand/collapse.
+- `overflow-x: clip` on both `html` and `body` to prevent horizontal overflow (`hidden` used as fallback for older browsers).
+- All flex button groups (filter-bar, export-toolbar, reference-item action row, workspace dedup filters) use `flex-wrap` for narrow viewport resilience.
+- WorkspaceEntryCard title row uses `flex-1 min-w-0` on title + `shrink-0` on badge container to pin badges top-right regardless of title length.
+- Progressive rendering in compact mode (inside batch accordion): rAF-based chunked render (16 items/frame) avoids blocking the main thread when expanding panels with 50+ references.
 
 ## Development Phases
 
